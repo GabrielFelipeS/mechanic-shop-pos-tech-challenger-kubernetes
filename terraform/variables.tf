@@ -1,4 +1,4 @@
-variable "region" { default = "us-east-1" }
+variable "region" { default = "sa-east-1" }
 variable "project_name" { default = "mechanic-shop" }
 variable "namespace" { default = "mechanic-shop" }
 variable "newrelic_app_name" { default = "mechanic-shop" }
