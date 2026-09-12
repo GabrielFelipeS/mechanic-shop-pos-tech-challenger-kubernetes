@@ -27,6 +27,9 @@ jobs:
   deploy:
     needs: validate
     if: github.event_name == 'push'
+    concurrency:
+      group: mechanic-shop-kubernetes-infrastructure-state
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     defaults:
       run:
