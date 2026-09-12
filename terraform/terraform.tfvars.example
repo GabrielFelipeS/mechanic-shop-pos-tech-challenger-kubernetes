@@ -1,0 +1,19 @@
+# Copie para terraform.tfvars e ajuste conforme o seu lab.
+
+# Nome da role pre-existente do lab. Learner Lab usa LabRole.
+lab_role_name = "LabRole"
+
+# Imagem publica da API.
+app_image = "kaizenn/mechanic-shop-backend:obs-b9c00c1"
+
+# Restrinja o acesso ao seu IP publico, se quiser.
+# nodeport_allowed_cidr   = "203.0.113.10/32"
+# api_server_allowed_cidr = "203.0.113.10/32"
+
+# Reduz o consumo de credito do lab.
+# capacity_type     = "SPOT"
+# node_desired_size = 2
+
+# Observabilidade (opcional).
+# newrelic_license_key = ""
+# newrelic_app_name    = "mechanic-shop (AWS Academy)"

@@ -1,0 +1,6 @@
+newrelic_account_id = 1234567
+newrelic_api_key    = "" 
+newrelic_region     = "US"
+
+alert_email      = "equipe@example.com"
+health_check_url = "http://<endereco-publico>/actuator/health"
