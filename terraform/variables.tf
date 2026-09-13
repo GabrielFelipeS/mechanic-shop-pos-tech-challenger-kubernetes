@@ -3,7 +3,6 @@ variable "project_name" { default = "mechanic-shop" }
 variable "namespace" { default = "mechanic-shop" }
 variable "newrelic_app_name" { default = "mechanic-shop" }
 variable "cluster_version" { default = "1.34" }
-variable "lab_role_name" { default = "LabRole" }
 variable "vpc_cidr" { default = "10.0.0.0/16" }
 variable "subnet_count" { default = 3 }
 variable "instance_type" { default = "t3.medium" }
@@ -27,6 +26,11 @@ variable "newrelic_low_data_mode" { default = true }
 variable "app_deployer_role_arn" {
   description = "IAM role assumed by the Java application GitHub Actions workflow."
   type        = string
+
+  validation {
+    condition     = length(trimspace(var.app_deployer_role_arn)) > 0
+    error_message = "app_deployer_role_arn must be the Java repository GitHub Actions role ARN."
+  }
 }
 variable "tags" {
   type = map(string)

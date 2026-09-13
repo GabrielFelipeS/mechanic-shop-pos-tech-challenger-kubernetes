@@ -1,19 +1,12 @@
 # ---------------------------------------------------------------------------
 # Cluster EKS
 #
-# Diferencas em relacao a infra/aws, todas por causa das restricoes do AWS Academy:
-#
-#   - role_arn usa a LabRole existente, em vez de criar uma role de cluster.
-#   - bootstrap_cluster_creator_admin_permissions = true garante acesso de admin
-#     ao principal que roda o terraform, sem precisar de aws_eks_access_entry
-#     (que falha no lab porque o caller ARN e uma sessao assumida de voclabs).
-#   - nao existe aws_iam_openid_connect_provider: o lab bloqueia a criacao, entao
-#     nao ha IRSA neste cluster.
+# The cluster and worker nodes use dedicated IAM roles declared in iam.tf.
 # ---------------------------------------------------------------------------
 
 resource "aws_eks_cluster" "cluster" {
   name     = local.cluster_name
-  role_arn = local.lab_role_arn
+  role_arn = aws_iam_role.eks_cluster.arn
   version  = var.cluster_version
 
   access_config {
@@ -27,12 +20,14 @@ resource "aws_eks_cluster" "cluster" {
     endpoint_private_access = true
     public_access_cidrs     = [var.api_server_allowed_cidr]
   }
+
+  depends_on = [aws_iam_role_policy_attachment.eks_cluster_policy]
 }
 
 resource "aws_eks_node_group" "node_group" {
   cluster_name    = aws_eks_cluster.cluster.name
   node_group_name = "nodeg-${var.project_name}"
-  node_role_arn   = local.lab_role_arn
+  node_role_arn   = aws_iam_role.eks_node.arn
   subnet_ids      = aws_subnet.public[*].id
 
   instance_types = [var.instance_type]
@@ -59,6 +54,13 @@ resource "aws_eks_node_group" "node_group" {
     # O desired_size passa a ser controlado pelo cluster-autoscaler/console depois do apply.
     ignore_changes = [scaling_config[0].desired_size]
   }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_node_worker,
+    aws_iam_role_policy_attachment.eks_node_ecr_pull,
+    aws_iam_role_policy_attachment.eks_node_cni,
+    aws_iam_role_policy_attachment.eks_node_ebs_csi,
+  ]
 }
 
 # The Java repository deploys Kubernetes manifests after building its image.
@@ -83,10 +85,8 @@ resource "aws_eks_access_policy_association" "app_deployer_admin" {
 # ---------------------------------------------------------------------------
 # Driver EBS CSI
 #
-# Necessario para o PVC do PostgreSQL: o EKS nao tem mais o provisionador
-# in-tree. Sem IRSA, o addon usa as credenciais da instance profile do node
-# (LabRole), que ja tem permissao de EC2/EBS no AWS Academy. Por isso o
-# service_account_role_arn e omitido de proposito.
+# Necessary for persistent volumes. Without IRSA, the add-on uses the node
+# role credentials, which include AmazonEBSCSIDriverPolicy.
 #
 # Essas credenciais so chegam ao ebs-csi-controller por causa do hop limit 2
 # configurado em launch-template.tf. Sem aquele arquivo este addon trava.

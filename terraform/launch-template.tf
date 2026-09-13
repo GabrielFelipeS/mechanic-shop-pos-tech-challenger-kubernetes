@@ -7,8 +7,7 @@
 # http_put_response_hop_limit = 1, o que impede qualquer pod SEM hostNetwork de
 # alcancar o IMDS e, portanto, de obter as credenciais da role do node.
 #
-# Como neste cluster nao ha IRSA (o AWS Academy bloqueia a criacao do OIDC
-# provider), o IMDS e a UNICA fonte de credenciais AWS para os pods. Com hop
+# Without IRSA, IMDS is the source of AWS credentials for pods. With hop
 # limit 1 o resultado e:
 #
 #   ebs-csi-node       (DaemonSet, hostNetwork: true)  -> funciona
