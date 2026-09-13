@@ -1,22 +1,9 @@
 # ---------------------------------------------------------------------------
 # Launch template dos nodes
 #
-# Existe por um unico motivo: o limite de hops do IMDS.
-#
-# O launch template que o EKS gera sozinho para um managed node group usa
-# http_put_response_hop_limit = 1, o que impede qualquer pod SEM hostNetwork de
-# alcancar o IMDS e, portanto, de obter as credenciais da role do node.
-#
-# Without IRSA, IMDS is the source of AWS credentials for pods. With hop
-# limit 1 o resultado e:
-#
-#   ebs-csi-node       (DaemonSet, hostNetwork: true)  -> funciona
-#   ebs-csi-controller (Deployment, hostNetwork: false) -> ebs-plugin em
-#                       CrashLoopBackOff, addon preso em CREATING para sempre
-#
-# Subir o hop limit para 2 resolve: o pacote sai do pod, passa pelo host e
-# chega ao IMDS. Como o launch template nao define image_id nem user_data, o
-# EKS continua injetando a AMI otimizada e o bootstrap do node normalmente.
+# The launch template enforces IMDSv2 and configures the root EBS volume for
+# managed nodes. No application workload stores persistent data on EBS; RDS
+# owns PostgreSQL storage in the separate database repository.
 # ---------------------------------------------------------------------------
 
 resource "aws_launch_template" "node" {

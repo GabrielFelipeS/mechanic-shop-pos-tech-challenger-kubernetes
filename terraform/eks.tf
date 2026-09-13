@@ -59,7 +59,6 @@ resource "aws_eks_node_group" "node_group" {
     aws_iam_role_policy_attachment.eks_node_worker,
     aws_iam_role_policy_attachment.eks_node_ecr_pull,
     aws_iam_role_policy_attachment.eks_node_cni,
-    aws_iam_role_policy_attachment.eks_node_ebs_csi,
   ]
 }
 
@@ -82,28 +81,3 @@ resource "aws_eks_access_policy_association" "app_deployer_admin" {
   }
 }
 
-# ---------------------------------------------------------------------------
-# Driver EBS CSI
-#
-# Necessary for persistent volumes. Without IRSA, the add-on uses the node
-# role credentials, which include AmazonEBSCSIDriverPolicy.
-#
-# Essas credenciais so chegam ao ebs-csi-controller por causa do hop limit 2
-# configurado em launch-template.tf. Sem aquele arquivo este addon trava.
-# ---------------------------------------------------------------------------
-
-resource "aws_eks_addon" "ebs_csi" {
-  cluster_name                = aws_eks_cluster.cluster.name
-  addon_name                  = "aws-ebs-csi-driver"
-  resolve_conflicts_on_create = "OVERWRITE"
-  resolve_conflicts_on_update = "OVERWRITE"
-
-  # O addon so fica ACTIVE quando o ebs-csi-controller consegue falar com a API
-  # da EC2, o que depende do hop limit do IMDS definido no launch template.
-  depends_on = [aws_eks_node_group.node_group]
-
-  timeouts {
-    create = "30m"
-    update = "30m"
-  }
-}
