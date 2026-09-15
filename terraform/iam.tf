@@ -49,3 +49,18 @@ resource "aws_iam_role_policy_attachment" "eks_node_cni" {
   role       = aws_iam_role.eks_node.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
 }
+
+# Kong runs in the EKS nodes and invokes this function directly through its
+# aws-lambda plugin. Scope the node role to this single function.
+data "aws_iam_policy_document" "eks_node_invoke_cpf_login_lambda" {
+  statement {
+    actions   = ["lambda:InvokeFunction"]
+    resources = [data.aws_lambda_function.cpf_login.arn]
+  }
+}
+
+resource "aws_iam_role_policy" "eks_node_invoke_cpf_login_lambda" {
+  name   = "invoke-cpf-login-lambda"
+  role   = aws_iam_role.eks_node.id
+  policy = data.aws_iam_policy_document.eks_node_invoke_cpf_login_lambda.json
+}

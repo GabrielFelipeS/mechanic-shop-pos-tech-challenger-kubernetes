@@ -24,8 +24,85 @@ jobs:
       - run: terraform init -backend=false
       - run: terraform validate
 
+  validate-lambda:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: lambda
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false
+      - run: terraform validate
+  
+  validate-observability:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: observability
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false
+      - run: terraform validate  
+
+  deploy-lambda:
+    needs: validate-lambda
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: lambda
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Check whether Lambda provisioning is required
+        id: lambda
+        env:
+          FUNCTION_NAME: ${{ vars.LAMBDA_FUNCTION_NAME }}
+        run: |
+          set +e
+          lookup="$(aws lambda get-function --function-name "$FUNCTION_NAME" 2>&1)"
+          lookup_status=$?
+          set -e
+
+          if [ "$lookup_status" -eq 0 ]; then
+            echo "create=false" >> "$GITHUB_OUTPUT"
+          elif echo "$lookup" | grep -q "ResourceNotFoundException"; then
+            echo "create=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "$lookup" >&2
+            exit "$lookup_status"
+          fi
+      - name: Create Lambda infrastructure
+        if: steps.lambda.outputs.create == 'true'
+        env:
+          TF_VAR_region: ${{ vars.AWS_REGION }}
+          TF_VAR_function_name: ${{ vars.LAMBDA_FUNCTION_NAME }}
+          TF_VAR_artifact_bucket: ${{ vars.LAMBDA_ARTIFACT_BUCKET }}
+          TF_VAR_artifact_key: ${{ vars.LAMBDA_ARTIFACT_KEY }}
+          TF_VAR_artifact_version: ${{ vars.LAMBDA_ARTIFACT_VERSION }}
+          TF_VAR_internal_api_base_url: ${{ vars.LAMBDA_INTERNAL_API_BASE_URL }}
+          TF_VAR_internal_api_secret: ${{ secrets.INTERNAL_API_SECRET }}
+          TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="key=kubernetes/lambda.tfstate" \
+            -backend-config="region=${{ vars.AWS_REGION }}" \
+            -backend-config="use_lockfile=true" \
+            -backend-config="encrypt=true"
+          terraform plan -out=tfplan
+          terraform apply -auto-approve tfplan 
+
   deploy:
-    needs: validate
+    needs: [validate, deploy-lambda]
     if: github.event_name == 'push'
     concurrency:
       group: mechanic-shop-kubernetes-infrastructure-state
@@ -46,6 +123,7 @@ jobs:
           TF_VAR_region: ${{ vars.AWS_REGION }}
           TF_VAR_newrelic_license_key: ${{ secrets.NEW_RELIC_LICENSE_KEY }}
           TF_VAR_app_deployer_role_arn: ${{ vars.APP_DEPLOYER_ROLE_ARN }}
+          TF_VAR_lambda_function_name: ${{ vars.LAMBDA_FUNCTION_NAME }}
         run: |
           terraform init \
             -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
@@ -57,19 +135,7 @@ jobs:
           terraform apply -auto-approve tfplan
           echo "VPC_ID=$(terraform output -raw vpc_id)"
           echo "VPC_CIDR=$(terraform output -raw vpc_cidr)"
-          echo "PRIVATE_SUBNET_IDS_JSON=$(terraform output -json private_subnet_ids)"
-
-  validate-observability:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: observability
-    steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
-      - run: terraform fmt -check -recursive
-      - run: terraform init -backend=false
-      - run: terraform validate
+          echo "PRIVATE_SUBNET_IDS_JSON=$(terraform output -json private_subnet_ids)"  
 
   deploy-observability:
     needs: [deploy, validate-observability]

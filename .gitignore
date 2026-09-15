@@ -4,3 +4,5 @@
 *.tfvars
 crash.log
 *.tfplan
+# Helm manifests renderizados podem conter valores resolvidos de secrets.
+observability/newrelic.yaml

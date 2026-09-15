@@ -17,3 +17,6 @@ app_image = "kaizenn/mechanic-shop-backend:obs-b9c00c1"
 # Observabilidade (opcional).
 # newrelic_license_key = ""
 # newrelic_app_name    = "mechanic-shop (AWS Academy)"
+
+# Lambda de login por CPF provisionada pela stack ./lambda.
+# lambda_function_name          = "mechanic-shop-cpf-login"

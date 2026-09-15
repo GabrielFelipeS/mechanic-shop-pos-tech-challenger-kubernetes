@@ -23,6 +23,11 @@ variable "newrelic_license_key" {
 }
 variable "newrelic_bundle_version" { default = "" }
 variable "newrelic_low_data_mode" { default = true }
+variable "lambda_function_name" {
+  description = "Name of the CPF login Lambda managed by this stack."
+  type        = string
+  default     = "mechanic-shop-cpf-login"
+}
 variable "app_deployer_role_arn" {
   description = "IAM role assumed by the Java application GitHub Actions workflow."
   type        = string

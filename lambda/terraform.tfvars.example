@@ -1,0 +1,8 @@
+# Values normally come from the GitHub Actions variables and secrets.
+region                = "sa-east-1"
+function_name         = "mechanic-shop-cpf-login"
+artifact_bucket       = "existing-versioned-lambda-artifacts"
+artifact_key          = "cpf-login/<commit>/cpf-login-lambda.jar"
+internal_api_base_url = "https://<kong-load-balancer>"
+# internal_api_secret = ""
+# jwt_secret          = ""

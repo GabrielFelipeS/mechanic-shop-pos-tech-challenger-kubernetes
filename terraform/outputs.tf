@@ -46,6 +46,16 @@ output "private_subnet_ids" {
   value       = aws_subnet.private[*].id
 }
 
+output "cpf_login_lambda_name" {
+  description = "Name of the CPF login Lambda invoked directly by Kong."
+  value       = data.aws_lambda_function.cpf_login.function_name
+}
+
+output "cpf_login_lambda_arn" {
+  description = "ARN of the CPF login Lambda invoked directly by Kong."
+  value       = data.aws_lambda_function.cpf_login.arn
+}
+
 # ---------------------------------------------------------------------------
 # Contrato com infra/newrelic/terraform
 #
